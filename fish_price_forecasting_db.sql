@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 22, 2026 at 01:09 PM
+-- Generation Time: Nov 06, 2026 at 03:12 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -135,7 +135,7 @@ CREATE TABLE `price_records` (
   `remarks` text DEFAULT NULL,
   `recorded_by` bigint(20) UNSIGNED DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `price_records`
@@ -165,7 +165,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `role`, `created_at`, `profile_picture`) VALUES
-(1, 'Cheska Marie Jumantoc', 'marie@gmail.com', '$2y$10$eOBAvZQDHGwv36.nFBgGBOh3ouS5n27k9cQdF5zXyFQ41XUXjeOli', 'admin', '2026-10-19 13:04:15', NULL);
+(1, 'Cheska Marie Jumantoc', 'marie@gmail.com', '$2y$10$P3BYEVYcHoz4dXaBKsUEguswPuCibo1OeAwaVKVLkZupH0DEpfQq.', 'admin', '2026-10-19 13:04:15', NULL);
 
 --
 -- Indexes for dumped tables
@@ -262,7 +262,7 @@ ALTER TABLE `model_evaluations`
 -- AUTO_INCREMENT for table `price_records`
 --
 ALTER TABLE `price_records`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `users`
