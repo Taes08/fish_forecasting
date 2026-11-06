@@ -11,6 +11,7 @@ $accessUrl = $isLoggedIn
     : 'auth/login.php';
 
 $accessLabel = $isLoggedIn ? 'Dashboard' : 'Sign In';
+require_once __DIR__ . '/includes/public_analytics.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -42,6 +43,7 @@ $accessLabel = $isLoggedIn ? 'Dashboard' : 'Sign In';
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -228,6 +230,7 @@ $accessLabel = $isLoggedIn ? 'Dashboard' : 'Sign In';
 
             <nav class="hidden md:flex items-center gap-9 text-sm font-semibold">
                 <a href="#home" class="nav-link">Home</a>
+                <a href="#market-analytics" class="nav-link">Market Analytics</a>
                 <a href="#features" class="nav-link">Features</a>
                 <a href="#process" class="nav-link">How It Works</a>
                 <a href="#about" class="nav-link">About</a>
@@ -252,7 +255,8 @@ $accessLabel = $isLoggedIn ? 'Dashboard' : 'Sign In';
 
         <div id="mobileMenu" class="mobile-menu md:hidden flex-col gap-5 pb-6 text-sm font-semibold">
             <a href="#home" class="nav-link">Home</a>
-            <a href="#features" class="nav-link">Features</a>
+            <a href="#market-analytics" class="nav-link">Market Analytics</a>
+                <a href="#features" class="nav-link">Features</a>
             <a href="#process" class="nav-link">How It Works</a>
             <a href="#about" class="nav-link">About</a>
 
@@ -337,66 +341,25 @@ $accessLabel = $isLoggedIn ? 'Dashboard' : 'Sign In';
                         </div>
 
                         <div class="bg-slate-50 border border-slate-100 rounded-2xl p-5">
-
-                            <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-                                <span class="text-sm font-bold text-ocean">
-                                    Example Weekly Price Pattern
-                                </span>
-
-                                <span class="px-3 py-1 rounded-full bg-teal-50 text-marine text-xs font-bold">
-                                    Sample Data
-                                </span>
+                            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                                <span class="text-sm font-bold text-ocean">Observed Price Trends (Last 90 Days)</span>
+                                <span class="px-3 py-1 rounded-full bg-teal-50 text-marine text-xs font-bold">MySQL Live Data</span>
                             </div>
-
-                            <div class="chart-grid rounded-xl">
-                                <svg viewBox="0 0 520 230"
-                                     class="w-full h-auto"
-                                     role="img"
-                                     aria-label="Illustrative weekly fish price trend, not actual market observations">
-
-                                    <defs>
-                                        <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stop-color="#2EC4B6" stop-opacity=".25"/>
-                                            <stop offset="100%" stop-color="#2EC4B6" stop-opacity="0"/>
-                                        </linearGradient>
-                                    </defs>
-
-                                    <path d="M20 175 L100 155 L180 165 L260 115 L340 130 L420 75 L500 90 L500 215 L20 215 Z"
-                                          fill="url(#areaFill)"/>
-
-                                    <path d="M20 175 L100 155 L180 165 L260 115 L340 130 L420 75 L500 90"
-                                          fill="none"
-                                          stroke="#087E8B"
-                                          stroke-width="5"
-                                          stroke-linecap="round"
-                                          stroke-linejoin="round"/>
-
-                                    <g fill="#2EC4B6" stroke="white" stroke-width="4">
-                                        <circle cx="20" cy="175" r="7"/>
-                                        <circle cx="100" cy="155" r="7"/>
-                                        <circle cx="180" cy="165" r="7"/>
-                                        <circle cx="260" cy="115" r="7"/>
-                                        <circle cx="340" cy="130" r="7"/>
-                                        <circle cx="420" cy="75" r="7"/>
-                                        <circle cx="500" cy="90" r="7"/>
-                                    </g>
-                                </svg>
+                            <div class="grid sm:grid-cols-2 gap-3 mb-4">
+                                <select id="heroFish" aria-label="Select fish species" class="rounded-xl border border-slate-200 p-3 bg-white text-sm">
+                                    <?php foreach ($analytics['speciesOptions'] as $fish): ?>
+                                        <option value="<?= (int)$fish['id'] ?>"><?= htmlspecialchars($fish['common_name'], ENT_QUOTES, 'UTF-8') ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <select id="heroMarket" aria-label="Select market" class="rounded-xl border border-slate-200 p-3 bg-white text-sm">
+                                    <?php foreach ($analytics['marketOptions'] as $market): ?>
+                                        <option value="<?= (int)$market['id'] ?>"><?= htmlspecialchars($market['name'], ENT_QUOTES, 'UTF-8') ?></option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
-
-                            <div class="flex justify-between text-xs text-slate-500 mt-3">
-                                <span>Day 1</span>
-                                <span>Day 2</span>
-                                <span>Day 3</span>
-                                <span>Day 4</span>
-                                <span>Day 5</span>
-                                <span>Day 6</span>
-                                <span>Day 7</span>
-                            </div>
-
-                            <p class="text-xs text-slate-500 mt-5 leading-5">
-                                This chart is for interface demonstration only.
-                                It does not represent actual prices or machine learning predictions.
-                            </p>
+                            <div class="relative h-64"><canvas id="heroTrendChart" aria-label="Observed fish prices" role="img"></canvas></div>
+                            <p id="trendEmpty" class="hidden text-sm text-slate-500 mt-3">No price observations for this selection in the last 90 days.</p>
+                            <p class="text-xs text-slate-500 mt-4">Daily average of recorded observations, not machine learning forecasts.</p>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4 mt-5">
@@ -432,6 +395,58 @@ $accessLabel = $isLoggedIn ? 'Dashboard' : 'Sign In';
                     </div>
                 </div>
 
+            </div>
+        </div>
+    </section>
+
+    <section id="market-analytics" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-5 sm:px-8">
+            <p class="section-label mb-3">Live Market Monitoring</p>
+            <h2 class="font-display text-3xl md:text-4xl font-bold mb-3">Database-Connected Market Analytics</h2>
+            <p class="text-slate-600 mb-8">Aggregated historical records from participating markets. These are observed prices, not predictions.</p>
+            <?php if ($analyticsError): ?>
+                <p class="rounded-xl bg-amber-50 text-amber-900 p-4 mb-6" role="alert"><?= htmlspecialchars($analyticsError, ENT_QUOTES, 'UTF-8') ?></p>
+            <?php endif; ?>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <?php foreach ([
+                    ['Fish Species',number_format($analytics['species'])],
+                    ['Active Markets',number_format($analytics['markets'])],
+                    ['Price Observations',number_format($analytics['records'])],
+                    ['Overall Mean Price',$analytics['average'] === null ? 'No data' : '₱'.number_format($analytics['average'],2).'/kg']
+                ] as $metric): ?>
+                    <div class="rounded-2xl border border-teal-100 bg-seamist p-5">
+                        <p class="text-sm text-slate-600 mb-2"><?= htmlspecialchars($metric[0], ENT_QUOTES, 'UTF-8') ?></p>
+                        <p class="font-display text-2xl font-bold text-ocean"><?= htmlspecialchars($metric[1], ENT_QUOTES, 'UTF-8') ?></p>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <div class="grid lg:grid-cols-2 gap-6 mb-8">
+                <div class="rounded-2xl border border-slate-200 p-6">
+                    <h3 class="font-display text-xl font-bold mb-4">Average Price by Fish (₱/kg)</h3>
+                    <div class="h-72"><canvas id="speciesChart"></canvas></div>
+                </div>
+                <div class="rounded-2xl border border-slate-200 p-6">
+                    <h3 class="font-display text-xl font-bold mb-4">Price Records by Market</h3>
+                    <div class="h-72"><canvas id="marketChart"></canvas></div>
+                </div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 p-6 overflow-x-auto">
+                <h3 class="font-display text-xl font-bold mb-4">Recent Daily Average Prices</h3>
+                <table class="w-full text-sm text-left min-w-[560px]">
+                    <thead class="bg-seamist text-ocean"><tr><th class="p-3">Date</th><th class="p-3">Fish</th><th class="p-3">Market</th><th class="p-3">Average Price</th><th class="p-3">Observations</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($analytics['recent'] as $row): ?>
+                        <tr class="border-b border-slate-100">
+                            <td class="p-3"><?= htmlspecialchars($row['observed_on'], ENT_QUOTES, 'UTF-8') ?></td>
+                            <td class="p-3"><?= htmlspecialchars($row['fish'], ENT_QUOTES, 'UTF-8') ?></td>
+                            <td class="p-3"><?= htmlspecialchars($row['market'], ENT_QUOTES, 'UTF-8') ?></td>
+                            <td class="p-3">₱<?= number_format((float)$row['avg_price'],2) ?></td>
+                            <td class="p-3"><?= (int)$row['samples'] ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if (!$analytics['recent']): ?><tr><td colspan="5" class="p-5 text-center text-slate-500">No historical price observations available yet.</td></tr><?php endif; ?>
+                    </tbody>
+                </table>
             </div>
         </div>
     </section>
@@ -756,5 +771,40 @@ $accessLabel = $isLoggedIn ? 'Dashboard' : 'Sign In';
     });
 </script>
 
+
+<script>
+const fishcastAnalytics = <?= json_encode([
+    'trend'=>$analytics['trend'], 'speciesPrices'=>$analytics['speciesPrices'], 'marketCounts'=>$analytics['marketCounts']
+], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) ?>;
+(function () {
+    if (typeof Chart === 'undefined') return;
+    const palette = ['#087E8B','#2EC4B6','#0B3954','#60A5FA','#F59E0B','#A78BFA','#F472B6','#84CC16'];
+    const base = {responsive:true, maintainAspectRatio:false};
+    const fish = document.getElementById('heroFish');
+    const market = document.getElementById('heroMarket');
+    let trendChart;
+    function updateTrend() {
+        const filtered = fishcastAnalytics.trend.filter(r => String(r.fish_id) === fish.value && String(r.market_id) === market.value);
+        document.getElementById('trendEmpty').classList.toggle('hidden', filtered.length > 0);
+        if (trendChart) trendChart.destroy();
+        trendChart = new Chart(document.getElementById('heroTrendChart'), {
+            type:'line',
+            data:{labels:filtered.map(r=>r.observed_on),datasets:[{label:'Average observed price (₱/kg)',data:filtered.map(r=>Number(r.avg_price)),borderColor:'#087E8B',backgroundColor:'rgba(46,196,182,.13)',fill:true,tension:.3,pointRadius:3}]},
+            options:{...base,plugins:{legend:{display:false}},scales:{y:{beginAtZero:false,ticks:{callback:v=>'₱'+v}}}}
+        });
+    }
+    if (fish && market) {fish.addEventListener('change',updateTrend);market.addEventListener('change',updateTrend);updateTrend();}
+    const species = fishcastAnalytics.speciesPrices;
+    new Chart(document.getElementById('speciesChart'),{
+        type:'bar',data:{labels:species.map(r=>r.label),datasets:[{label:'Mean ₱/kg',data:species.map(r=>Number(r.value)),backgroundColor:'#087E8B',borderRadius:6}]},
+        options:{...base,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}}
+    });
+    const markets = fishcastAnalytics.marketCounts;
+    new Chart(document.getElementById('marketChart'),{
+        type:'doughnut',data:{labels:markets.map(r=>r.label),datasets:[{data:markets.map(r=>Number(r.value)),backgroundColor:markets.map((_,i)=>palette[i%palette.length])}]},
+        options:{...base,plugins:{legend:{position:'bottom'}}}
+    });
+})();
+</script>
 </body>
 </html>
