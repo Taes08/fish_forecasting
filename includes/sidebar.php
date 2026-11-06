@@ -7,7 +7,8 @@ $menu = [
     ['fish_species.php', 'fish', 'Fish Species'],
     ['markets.php', 'store', 'Markets'],
     ['price_records.php', 'database', 'Price Records'],
-    ['import_prices.php', 'file-up', 'Import Dataset']
+    ['import_prices.php', 'file-up', 'Import Dataset'],
+    ['forecasts.php', 'chart-line', 'ML Forecasts']
 ];
 
 function sidebarE($value) {
