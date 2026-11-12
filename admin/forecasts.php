@@ -35,11 +35,41 @@ foreach ($rows as $r) { $labels[]=$r['common_name'].' · '.$r['market_name'].' �
 <main class="max-w-7xl mx-auto p-6 space-y-6">
 <div><h1 class="text-3xl font-bold">Machine Learning Price Forecasts</h1><p class="text-slate-600 mt-2">Forecasts from your verified historical records. Model estimates are not guaranteed prices.</p></div>
 <form method="get" class="bg-white p-5 rounded-2xl border flex flex-wrap gap-3 items-end">
-<label class="text-sm">Fish species<select name="fish_id" class="block border rounded-lg p-2 mt-1"><option value="0">All species</option><?php foreach($fish as $f): ?><option value="<?= (int)$f['id'] ?>" <?= $fishId==(int)$f['id']?'selected':'' ?>><?= fe($f['common_name']) ?></option><?php endforeach; ?></select></label>
-<label class="text-sm">Market<select name="market_id" class="block border rounded-lg p-2 mt-1"><option value="0">All markets</option><?php foreach($markets as $m): ?><option value="<?= (int)$m['id'] ?>" <?= $marketId==(int)$m['id']?'selected':'' ?>><?= fe($m['name']) ?></option><?php endforeach; ?></select></label>
+<label class="text-sm">Fish species<select name="fish_id" class="block border rounded-lg p-2 mt-1">
+  <option value="0">All species</option><?php foreach($fish as $f): ?>
+  <option value="<?= (int)$f['id'] ?>" <?= $fishId==(int)$f['id']?'selected':'' ?>><?= fe($f['common_name']) ?></option><?php endforeach; ?>
+</select>
+</label>
+<label class="text-sm">Market<select name="market_id" class="block border rounded-lg p-2 mt-1">
+<option value="0">All markets</option><?php foreach($markets as $m): ?>
+<option value="<?= (int)$m['id'] ?>" <?= $marketId==(int)$m['id']?'selected':'' ?>><?= fe($m['name']) ?></option><?php endforeach; ?>
+</select>
+</label>
 <button class="bg-[#087E8B] text-white px-5 py-2 rounded-lg">Filter</button></form>
 <section class="bg-white rounded-2xl border p-5"><h2 class="font-semibold mb-3">Forecast prices (₱ per kg)</h2>
-<?php if ($rows): ?><div style="height:320px"><canvas id="forecastChart"></canvas></div><?php else: ?><p class="text-slate-500">No forecasts available yet. Collect at least 45 distinct observation dates per market and fish species, then run the Python trainer.</p><?php endif; ?></section>
+<?php if ($rows): ?><div style="height:320px"><canvas id="forecastChart"></canvas></div><?php else: ?>
+<div class="bg-amber-50 border border-amber-200
+            rounded-xl p-5">
+
+    <h3 class="font-semibold text-amber-900 mb-2">
+        No Forecast Data Available
+    </h3>
+
+    <p class="text-sm text-amber-800 mb-3">
+        No saved forecasts match the selected fish
+        species and market.
+    </p>
+
+    <p class="text-sm text-slate-700">
+        Check whether sufficient historical data exists,
+        run the Python forecasting trainer,
+        and verify that predictions were saved
+        in the forecasts table.
+    </p>
+
+</div>
+<?php endif; ?>
+</section>
 <section class="bg-white rounded-2xl border p-5 overflow-x-auto"><h2 class="font-semibold mb-3">Latest forecast run by species and market</h2><table class="min-w-full text-sm"><thead><tr class="border-b text-left"><th class="p-2">Fish</th><th class="p-2">Market</th><th class="p-2">Target date</th><th class="p-2">Predicted ₱/kg</th><th class="p-2">Model</th><th class="p-2">MAE</th><th class="p-2">Generated</th></tr></thead><tbody>
 <?php foreach($rows as $r): ?><tr class="border-b"><td class="p-2"><?= fe($r['common_name']) ?></td><td class="p-2"><?= fe($r['market_name']) ?></td><td class="p-2"><?= fe($r['target_date']) ?></td><td class="p-2">₱<?= number_format((float)$r['predicted_price_per_kg'],2) ?></td><td class="p-2"><?= fe($r['model_name']) ?></td><td class="p-2"><?= $r['mae']===null?'—':number_format((float)$r['mae'],2) ?></td><td class="p-2"><?= fe($r['created_at']) ?></td></tr><?php endforeach; ?></tbody></table></section>
 </main></div><script>
