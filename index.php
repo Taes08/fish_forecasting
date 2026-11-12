@@ -451,6 +451,47 @@ require_once __DIR__ . '/includes/public_analytics.php';
         </div>
     </section>
 
+
+    <!-- Historical-data-based forecast baseline -->
+    <section id="price-forecast" class="py-20 bg-seamist">
+      <div class="max-w-7xl mx-auto px-5 sm:px-8">
+        <p class="section-label mb-3">Price Forecasting</p>
+        <h2 class="font-display text-3xl md:text-4xl font-bold mb-3">Fish Price Forecast Preview</h2>
+        <p class="text-slate-600 mb-8">Explore a simple linear-trend baseline based on available daily average observations. This is an illustrative statistical projection, not a trained machine-learning forecast.</p>
+        <div class="bg-white border border-teal-100 rounded-3xl shadow-sm p-5 sm:p-8">
+          <div class="grid sm:grid-cols-3 gap-4 mb-6">
+            <label class="text-sm font-semibold text-ocean">Fish species
+              <select id="forecastFish" class="block w-full mt-2 rounded-xl border border-slate-200 bg-white p-3 font-normal">
+                <?php foreach ($analytics['speciesOptions'] as $fish): ?>
+                  <option value="<?= (int)$fish['id'] ?>"><?= htmlspecialchars($fish['common_name'], ENT_QUOTES, 'UTF-8') ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label class="text-sm font-semibold text-ocean">Market
+              <select id="forecastMarket" class="block w-full mt-2 rounded-xl border border-slate-200 bg-white p-3 font-normal">
+                <?php foreach ($analytics['marketOptions'] as $market): ?>
+                  <option value="<?= (int)$market['id'] ?>"><?= htmlspecialchars($market['name'], ENT_QUOTES, 'UTF-8') ?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <label class="text-sm font-semibold text-ocean">Forecast horizon
+              <select id="forecastDays" class="block w-full mt-2 rounded-xl border border-slate-200 bg-white p-3 font-normal">
+                <option value="7">Next 7 days</option><option value="14">Next 14 days</option><option value="30">Next 30 days</option>
+              </select>
+            </label>
+          </div>
+          <div id="forecastStatus" role="status" class="text-sm text-slate-600 mb-4"></div>
+          <div class="relative h-80"><canvas id="forecastChart" role="img" aria-label="Historical fish prices and projected linear trend"></canvas></div>
+          <div class="grid sm:grid-cols-3 gap-4 mt-6">
+            <div class="rounded-2xl bg-slate-50 p-4"><p class="text-sm text-slate-500">Latest observed price</p><p id="forecastLast" class="font-display text-2xl font-bold text-ocean mt-1">—</p></div>
+            <div class="rounded-2xl bg-slate-50 p-4"><p class="text-sm text-slate-500">End-of-horizon projection</p><p id="forecastNext" class="font-display text-2xl font-bold text-ocean mt-1">—</p></div>
+            <div class="rounded-2xl bg-slate-50 p-4"><p class="text-sm text-slate-500">Projected change</p><p id="forecastChange" class="font-display text-2xl font-bold text-ocean mt-1">—</p></div>
+          </div>
+          <p class="text-xs text-slate-500 mt-5">Method: ordinary least-squares linear trend of daily mean prices in the available 90-day dataset, extrapolated from the latest observation. Requires at least three distinct observation dates. Results are not validated predictions and may be unreliable for sparse or volatile prices.</p>
+        </div>
+      </div>
+    </section>
+
     <section id="features" class="py-24 bg-white">
         <div class="max-w-7xl mx-auto px-5 sm:px-8">
 
@@ -800,10 +841,126 @@ const fishcastAnalytics = <?= json_encode([
         options:{...base,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}}
     });
     const markets = fishcastAnalytics.marketCounts;
-    new Chart(document.getElementById('marketChart'),{
-        type:'doughnut',data:{labels:markets.map(r=>r.label),datasets:[{data:markets.map(r=>Number(r.value)),backgroundColor:markets.map((_,i)=>palette[i%palette.length])}]},
-        options:{...base,plugins:{legend:{position:'bottom'}}}
+    const marketValues = markets.map(r => Number(r.value) || 0);
+    const marketTotal = marketValues.reduce((sum, value) => sum + value, 0);
+    const marketPercentagePlugin = {
+        id: 'marketPercentageLabels',
+        afterDatasetsDraw(chart) {
+            if (marketTotal <= 0) return;
+            const {ctx} = chart;
+            const arcs = chart.getDatasetMeta(0).data;
+            ctx.save();
+            ctx.font = 'bold 12px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            arcs.forEach((arc, i) => {
+                const percent = marketValues[i] / marketTotal * 100;
+                if (!Number.isFinite(percent) || percent < 3) return;
+                const angle = (arc.startAngle + arc.endAngle) / 2;
+                const radius = (arc.innerRadius + arc.outerRadius) / 2;
+                const x = arc.x + Math.cos(angle) * radius;
+                const y = arc.y + Math.sin(angle) * radius;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(percent.toFixed(1) + '%', x, y);
+            });
+            ctx.restore();
+        }
+    };
+    new Chart(document.getElementById('marketChart'), {
+        type: 'doughnut',
+        data: {
+            labels: markets.map(r => r.label),
+            datasets: [{
+                data: marketValues,
+                backgroundColor: markets.map((_, i) => palette[i % palette.length]),
+                borderColor: '#ffffff',
+                borderWidth: 2,
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            ...base,
+            cutout: '55%',
+            plugins: {
+                legend: {position: 'bottom'},
+                tooltip: {
+                    callbacks: {
+                        label(context) {
+                            const count = Number(context.parsed) || 0;
+                            const percentage = marketTotal ? (count / marketTotal * 100).toFixed(1) : '0.0';
+                            return `${context.label}: ${count.toLocaleString()} records (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [marketPercentagePlugin]
     });
+
+    // Forecast baseline: calculated only from existing daily averages, never invented values.
+    const fFish = document.getElementById('forecastFish');
+    const fMarket = document.getElementById('forecastMarket');
+    const fDays = document.getElementById('forecastDays');
+    let forecastChart = null;
+    const money = value => '₱' + value.toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
+    const dateUTC = value => Date.parse(String(value).slice(0,10) + 'T00:00:00Z');
+    const dayString = ms => new Date(ms).toISOString().slice(0,10);
+    function updateForecast() {
+        if (!fFish || !fMarket || !fDays) return;
+        const rows = fishcastAnalytics.trend
+            .filter(r => String(r.fish_id) === fFish.value && String(r.market_id) === fMarket.value)
+            .map(r => ({date: String(r.observed_on).slice(0,10), price: Number(r.avg_price)}))
+            .filter(r => Number.isFinite(dateUTC(r.date)) && Number.isFinite(r.price) && r.price > 0)
+            .sort((a,b) => a.date.localeCompare(b.date));
+        const daily = new Map();
+        rows.forEach(r => { const d = daily.get(r.date) || {sum:0,n:0}; d.sum += r.price; d.n++; daily.set(r.date,d); });
+        const points = [...daily.entries()].map(([date,v]) => ({date,price:v.sum/v.n})).sort((a,b)=>a.date.localeCompare(b.date));
+        const status = document.getElementById('forecastStatus');
+        const last = document.getElementById('forecastLast');
+        const next = document.getElementById('forecastNext');
+        const change = document.getElementById('forecastChange');
+        const horizon = Number(fDays.value);
+        if (forecastChart) { forecastChart.destroy(); forecastChart = null; }
+        last.textContent = next.textContent = change.textContent = '—';
+        if (points.length < 3) {
+            status.textContent = `Insufficient historical data (${points.length} distinct days). At least 3 observation dates are required for this baseline.`;
+            return;
+        }
+        const dayMs = 86400000;
+        const start = dateUTC(points[0].date);
+        const x = points.map(p => (dateUTC(p.date)-start)/dayMs);
+        const y = points.map(p => p.price);
+        const n = x.length;
+        const meanX = x.reduce((a,b)=>a+b,0)/n;
+        const meanY = y.reduce((a,b)=>a+b,0)/n;
+        const denominator = x.reduce((sum,v)=>sum+(v-meanX)**2,0);
+        if (!denominator) { status.textContent = 'Cannot calculate a trend for these observations.'; return; }
+        const slope = x.reduce((sum,v,i)=>sum+(v-meanX)*(y[i]-meanY),0)/denominator;
+        const intercept = meanY-slope*meanX;
+        const lastX = x[n-1];
+        const lastDate = dateUTC(points[n-1].date);
+        const future = Array.from({length:horizon},(_,i)=>({date:dayString(lastDate+(i+1)*dayMs),price:Math.max(0,intercept+slope*(lastX+i+1))}));
+        const projection = future[future.length-1].price;
+        const latest = y[n-1];
+        const delta = latest ? ((projection-latest)/latest)*100 : null;
+        last.textContent = money(latest);
+        next.textContent = money(projection);
+        change.textContent = delta === null ? '—' : `${delta>=0?'+':''}${delta.toFixed(1)}%`;
+        status.textContent = `${n} observed days; last observation ${points[n-1].date}. Projection starts after the last observation (not necessarily today).`;
+        const labels = [...points.map(p=>p.date),...future.map(p=>p.date)];
+        const history = [...y,...future.map(()=>null)];
+        const projectionSeries = [...Array(n-1).fill(null),latest,...future.map(p=>p.price)];
+        forecastChart = new Chart(document.getElementById('forecastChart'), {
+            type:'line',
+            data:{labels,datasets:[
+                {label:'Observed daily average (₱/kg)',data:history,borderColor:'#087E8B',backgroundColor:'rgba(8,126,139,.08)',tension:.25,pointRadius:3},
+                {label:'Linear-trend projection (₱/kg)',data:projectionSeries,borderColor:'#F59E0B',borderDash:[7,5],pointRadius:2,tension:0}
+            ]},
+            options:{...base,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:ctx=>ctx.parsed.y===null?'':`${ctx.dataset.label}: ${money(ctx.parsed.y)}`}}},scales:{x:{ticks:{maxTicksLimit:9}},y:{beginAtZero:false,ticks:{callback:v=>'₱'+v}}}}
+        });
+    }
+    [fFish,fMarket,fDays].forEach(el=>el?.addEventListener('change',updateForecast));
+    updateForecast();
 })();
 </script>
 </body>
